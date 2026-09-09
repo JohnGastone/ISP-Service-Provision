@@ -22,6 +22,11 @@ export default function CustomerForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [issued, setIssued] = useState<{
+    name: string;
+    email: string;
+    password: string;
+  } | null>(null);
 
   const districts = districtsFor(values.region);
 
@@ -55,7 +60,24 @@ export default function CustomerForm() {
 
     setSubmitting(true);
     try {
-      const created = await api<Customer>("/api/customers", { method: "POST", body: payload });
+      const created = await api<Customer & { generatedPassword?: string }>("/api/customers", {
+        method: "POST",
+        body: payload,
+      });
+
+      // The generated password is returned once and never again — hold the
+      // admin on this page so it can be copied and handed over.
+      if (created?.generatedPassword) {
+        setIssued({
+          name: created.name,
+          email: created.email,
+          password: created.generatedPassword,
+        });
+        setValues({ name: "", email: "", phone: "", region: "", district: "" });
+        setSubmitting(false);
+        return;
+      }
+
       router.push(`/admin/customers?created=${encodeURIComponent(created?.name ?? "Customer")}`);
       router.refresh();
     } catch (error) {
@@ -71,6 +93,10 @@ export default function CustomerForm() {
       }
       setSubmitting(false);
     }
+  }
+
+  if (issued) {
+    return <CredentialHandoff issued={issued} onDone={() => setIssued(null)} />;
   }
 
   return (
@@ -188,6 +214,82 @@ export default function CustomerForm() {
           </Button>
         </div>
       </form>
+    </Card>
+  );
+}
+
+/**
+ * One-time display of the sign-in credentials the API generated. The password
+ * is not retrievable afterwards, so this deliberately blocks the flow until the
+ * admin confirms they have copied it.
+ */
+function CredentialHandoff({
+  issued,
+  onDone,
+}: {
+  issued: { name: string; email: string; password: string };
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(
+        `Email: ${issued.email}\nPassword: ${issued.password}`,
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Clipboard can be blocked; the values stay visible for manual copying.
+      setCopied(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader
+        title={`${issued.name} registered`}
+        subtitle="Share these sign-in details with the customer now."
+      />
+      <div className="space-y-5 px-6 py-5">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <strong className="font-semibold">This password is shown only once.</strong> It cannot
+          be retrieved later — copy it before leaving this page.
+        </div>
+
+        <dl className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <dt className="text-sm font-semibold text-slate-500">Email</dt>
+            <dd className="font-mono text-sm text-slate-900">{issued.email}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <dt className="text-sm font-semibold text-slate-500">Password</dt>
+            <dd className="select-all font-mono text-sm font-semibold text-slate-900">
+              {issued.password}
+            </dd>
+          </div>
+        </dl>
+
+        <div className="flex flex-wrap gap-3">
+          <Button type="button" variant="secondary" onClick={copy}>
+            {copied ? "Copied" : "Copy credentials"}
+          </Button>
+          <Button type="button" onClick={onDone}>
+            Register another
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              router.push("/admin/customers");
+              router.refresh();
+            }}
+          >
+            Done
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }

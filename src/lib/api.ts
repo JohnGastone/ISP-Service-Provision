@@ -138,8 +138,22 @@ export async function getCustomer(id: number | string): Promise<Customer> {
   return apiFetch<Customer>(`/api/customers/${id}`);
 }
 
-export async function createCustomer(payload: CustomerPayload): Promise<Customer> {
-  return apiFetch<Customer>("/api/customers", { method: "POST", body: payload });
+/**
+ * Registration returns `generatedPassword` exactly once when the admin did not
+ * supply one — it is never retrievable again, so the UI must surface it.
+ */
+export async function createCustomer(
+  payload: CustomerPayload,
+): Promise<Customer & { generatedPassword?: string }> {
+  return apiFetch<Customer & { generatedPassword?: string }>("/api/customers", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+/** The signed-in customer's own record. */
+export async function getMyProfile(): Promise<Customer> {
+  return apiFetch<Customer>("/api/customers/me");
 }
 
 /* --------------------------- Bandwidth pools --------------------------- */
@@ -169,8 +183,14 @@ export async function updatePool(
 
 /* -------------------------- Bandwidth requests ------------------------- */
 
+/** Admin-only: every request in the system. */
 export async function listRequests(): Promise<BandwidthRequest[]> {
   return unwrapList<BandwidthRequest>(await apiFetch<unknown>("/api/bandwidth/requests"));
+}
+
+/** The signed-in customer's own requests. */
+export async function listMyRequests(): Promise<BandwidthRequest[]> {
+  return unwrapList<BandwidthRequest>(await apiFetch<unknown>("/api/bandwidth/requests/mine"));
 }
 
 export async function createRequest(

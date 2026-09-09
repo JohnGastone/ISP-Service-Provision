@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  display: "swap",
+/**
+ * Montserrat.woff2 is the Google Fonts "latin" variable file (weights 400–800),
+ * self-hosted so builds never depend on reaching fonts.googleapis.com.
+ */
+const montserrat = localFont({
+  src: "./fonts/Montserrat.woff2",
   variable: "--font-montserrat",
+  display: "swap",
+  weight: "400 800",
 });
 
 export const metadata: Metadata = {

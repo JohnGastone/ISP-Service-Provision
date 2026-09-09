@@ -27,19 +27,13 @@ export async function POST(request: Request) {
   try {
     const principal = await verifyCredential(credential);
 
-    // Every API endpoint is admin-only, so a non-admin account would be met
-    // with 403 everywhere. Refuse it here with an explanation instead.
-    if (!principal.admin) {
-      return NextResponse.json(
-        { message: "This portal is for administrator accounts only." },
-        { status: 403 },
-      );
-    }
+    // The API reports `role` directly; `admin` is the fallback for older builds.
+    const role = principal.role ?? (principal.admin ? "ADMIN" : "CUSTOMER");
 
     const user: AuthUser = {
       username: principal.username,
       fullName: principal.username,
-      role: "ADMIN",
+      role,
     };
 
     await setSession(credential, user);

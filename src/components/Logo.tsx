@@ -33,11 +33,18 @@ export function LogoLockup({
 }: {
   size?: number;
   subtitle?: string;
+  /** "light" = light text for a dark panel, which also backs the emblem. */
   tone?: "dark" | "light";
 }) {
   return (
     <span className="flex items-center gap-3">
-      <Logo size={size} priority />
+      {tone === "light" ? (
+        <span className="emblem-chip flex items-center justify-center rounded-full p-1.5">
+          <Logo size={size} priority />
+        </span>
+      ) : (
+        <Logo size={size} priority />
+      )}
       <span className="flex flex-col leading-tight">
         <span
           className={cn(

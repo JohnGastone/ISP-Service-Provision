@@ -1,0 +1,14 @@
+{
+  "/api/auth/login/route": "/api/auth/login",
+  "/api/auth/logout/route": "/api/auth/logout",
+  "/api/proxy/[...path]/route": "/api/proxy/[...path]",
+  "/_not-found/page": "/_not-found",
+  "/icon.png/route": "/icon.png",
+  "/page": "/",
+  "/login/page": "/login",
+  "/admin/customers/new/page": "/admin/customers/new",
+  "/admin/customers/page": "/admin/customers",
+  "/admin/bandwidth/page": "/admin/bandwidth",
+  "/admin/requests/page": "/admin/requests",
+  "/admin/page": "/admin"
+}

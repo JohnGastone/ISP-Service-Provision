@@ -24,7 +24,6 @@ export function parseUserCookie(raw: string): AuthUser | null {
   }
 }
 
-/** Only the admin area exists; every signed-in user lands there. */
-export function homeFor(_role: string): string {
-  return "/admin";
+export function homeFor(role: string): string {
+  return role === "ADMIN" ? "/admin" : "/customer";
 }

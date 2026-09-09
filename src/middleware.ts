@@ -20,6 +20,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
+  if (pathname.startsWith("/admin") && user!.role !== "ADMIN") {
+    return NextResponse.redirect(new URL("/customer", request.url));
+  }
+
+  if (pathname.startsWith("/customer") && user!.role !== "CUSTOMER") {
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
+
   if (pathname === "/") {
     return NextResponse.redirect(new URL(homeFor(user!.role), request.url));
   }

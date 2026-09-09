@@ -9,6 +9,8 @@ export type Role = "ADMIN" | "CUSTOMER";
 export interface AuthPrincipal {
   username: string;
   admin: boolean;
+  /** "ADMIN" | "CUSTOMER" — `admin` is the fallback when absent. */
+  role?: Role;
 }
 
 /** What this app stores in the session cookie for display and routing. */
