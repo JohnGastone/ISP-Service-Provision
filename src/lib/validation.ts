@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { TZ_PHONE_REGEX, isValidLocation, normalizePhoneInput } from "@/lib/tz";
 
-/** The API authenticates with HTTP Basic, so this is a username, not an email. */
+/** HTTP Basic: admins sign in with a username, customers with their email. */
 export const loginSchema = z.object({
-  username: z.string().trim().min(1, "Username is required"),
+  username: z.string().trim().min(1, "Enter your email address or username"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -53,6 +53,16 @@ export const bandwidthPoolSchema = z.object({
 /** POST /api/bandwidth/requests — both Mbps values must be > 0. */
 export const bandwidthRequestSchema = z.object({
   customerId: z.number({ invalid_type_error: "Select a customer" }).int().positive("Select a customer"),
+  poolId: z.number({ invalid_type_error: "Select a pool" }).int().positive("Select a bandwidth pool"),
+  requestedUploadMbps: mbps("Requested upload"),
+  requestedDownloadMbps: mbps("Requested download"),
+});
+
+/**
+ * A customer submitting for themselves — the API forces the customer id from
+ * the authenticated principal and ignores any sent in the body.
+ */
+export const myRequestSchema = z.object({
   poolId: z.number({ invalid_type_error: "Select a pool" }).int().positive("Select a bandwidth pool"),
   requestedUploadMbps: mbps("Requested upload"),
   requestedDownloadMbps: mbps("Requested download"),

@@ -1,5 +1,6 @@
 import { getCredential } from "@/lib/session";
 import type {
+  AuthPrincipal,
   BandwidthPool,
   BandwidthPoolPayload,
   BandwidthRequest,
@@ -117,15 +118,12 @@ function unwrapList<T>(data: unknown): T[] {
 /* --------------------------------- Auth -------------------------------- */
 
 /** Verifies a base64 "user:pass" credential. Returns null when rejected. */
-export async function verifyCredential(credential: string) {
-  return apiFetch<{ username: string; admin: boolean }>("/api/auth/login", {
-    method: "POST",
-    credential,
-  });
+export async function verifyCredential(credential: string): Promise<AuthPrincipal> {
+  return apiFetch<AuthPrincipal>("/api/auth/login", { method: "POST", credential });
 }
 
-export async function whoAmI() {
-  return apiFetch<{ username: string; admin: boolean }>("/api/auth/me");
+export async function whoAmI(): Promise<AuthPrincipal> {
+  return apiFetch<AuthPrincipal>("/api/auth/me");
 }
 
 /* ------------------------------ Customers ------------------------------ */

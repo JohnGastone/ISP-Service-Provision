@@ -24,11 +24,25 @@ export default function LoginForm() {
     setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
   }
 
-  async function onSubmit(event: React.FormEvent) {
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
 
-    const parsed = loginSchema.safeParse(values);
+    // Password managers autofill the DOM inputs without firing React's
+    // onChange, which would leave the controlled state empty and silently fail
+    // validation. Read what the form actually holds, falling back to state.
+    const formData = new FormData(event.currentTarget);
+    const submitted = {
+      username: (formData.get("username") as string | null) ?? values.username,
+      password: (formData.get("password") as string | null) ?? values.password,
+    };
+
+    // Keep the visible inputs and state in step with what was submitted.
+    if (submitted.username !== values.username || submitted.password !== values.password) {
+      setValues(submitted);
+    }
+
+    const parsed = loginSchema.safeParse(submitted);
     if (!parsed.success) {
       setErrors(fieldErrorsOf(parsed.error));
       return;
@@ -63,14 +77,19 @@ export default function LoginForm() {
     <form onSubmit={onSubmit} noValidate className="space-y-5">
       {formError ? <ErrorNotice message={formError} /> : null}
 
-      <Field label="Username" htmlFor="username" error={errors.username}>
+      <Field
+        label="Email or username"
+        htmlFor="username"
+        error={errors.username}
+        hint="Customers sign in with their email address"
+      >
         <Input
           id="username"
           name="username"
           type="text"
           autoComplete="username"
           autoFocus
-          placeholder="admin"
+          placeholder="you@example.co.tz"
           value={values.username}
           invalid={Boolean(errors.username)}
           onChange={(e) => update("username", e.target.value)}

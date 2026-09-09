@@ -72,6 +72,24 @@
       "namedRegex": "^/admin/requests(?:/)?$"
     },
     {
+      "page": "/customer",
+      "regex": "^/customer(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/customer(?:/)?$"
+    },
+    {
+      "page": "/customer/profile",
+      "regex": "^/customer/profile(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/customer/profile(?:/)?$"
+    },
+    {
+      "page": "/customer/requests",
+      "regex": "^/customer/requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/customer/requests(?:/)?$"
+    },
+    {
       "page": "/icon.png",
       "regex": "^/icon\\.png(?:/)?$",
       "routeKeys": {},
