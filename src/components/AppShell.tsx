@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
+import { LogoLockup } from "@/components/Logo";
 import { NavLink, type NavItem } from "@/components/NavLink";
 import type { AuthUser } from "@/lib/types";
 
@@ -19,13 +20,8 @@ export default function AppShell({
     <div className="app-backdrop min-h-screen bg-slate-50">
       <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Link href={home} className="flex items-center gap-3 rounded-lg">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-[0.7rem] font-extrabold tracking-tight text-white shadow-sm">
-              ISP
-            </span>
-            <span className="text-[0.95rem] font-bold tracking-tight text-slate-900">
-              Service Provision
-            </span>
+          <Link href={home} className="flex items-center rounded-lg">
+            <LogoLockup size={38} subtitle="Bandwidth provisioning" />
           </Link>
 
           <div className="flex items-center gap-3">
