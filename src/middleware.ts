@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { TOKEN_COOKIE, USER_COOKIE, homeFor, parseUserCookie } from "@/lib/session-shared";
+import { AUTH_COOKIE, USER_COOKIE, homeFor, parseUserCookie } from "@/lib/session-shared";
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  const token = request.cookies.get(TOKEN_COOKIE)?.value;
+  const credential = request.cookies.get(AUTH_COOKIE)?.value;
   const rawUser = request.cookies.get(USER_COOKIE)?.value;
   const user = rawUser ? parseUserCookie(rawUser) : null;
-  const signedIn = Boolean(token && user);
+  const signedIn = Boolean(credential && user);
 
   // Already signed in — bounce away from the login screen to the right home.
   if (pathname === "/login") {

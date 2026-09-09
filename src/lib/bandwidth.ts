@@ -1,18 +1,25 @@
-import type { BandwidthPool, PoolAvailability, ServiceRequest } from "@/lib/types";
+import type { BandwidthPool, BandwidthRequest, PoolAvailability } from "@/lib/types";
 
 /**
- * Remaining capacity in a pool. `total*` is what the admin funded the pool with,
- * `*Allocated` is what approved requests already hold.
+ * Remaining capacity. The backend computes `*RemainingMbps` from approved
+ * requests, so those are authoritative; the subtraction is only a fallback for
+ * payloads that omit them.
  */
 export function availability(pool: BandwidthPool): PoolAvailability {
-  const uploadRemaining = pool.totalUpload - pool.uploadAllocated;
-  const downloadRemaining = pool.totalDownload - pool.downloadAllocated;
+  const uploadRemaining =
+    pool.uploadRemainingMbps ?? pool.totalUploadMbps - pool.uploadAllocatedMbps;
+  const downloadRemaining =
+    pool.downloadRemainingMbps ?? pool.totalDownloadMbps - pool.downloadAllocatedMbps;
+
   return {
     uploadRemaining,
     downloadRemaining,
-    uploadUsedPct: pool.totalUpload > 0 ? (pool.uploadAllocated / pool.totalUpload) * 100 : 0,
+    uploadUsedPct:
+      pool.totalUploadMbps > 0 ? (pool.uploadAllocatedMbps / pool.totalUploadMbps) * 100 : 0,
     downloadUsedPct:
-      pool.totalDownload > 0 ? (pool.downloadAllocated / pool.totalDownload) * 100 : 0,
+      pool.totalDownloadMbps > 0
+        ? (pool.downloadAllocatedMbps / pool.totalDownloadMbps) * 100
+        : 0,
   };
 }
 
@@ -25,7 +32,7 @@ export interface AllocationCheck {
 
 /**
  * The approval guard: a request may only be approved when BOTH directions fit
- * within what is left in the pool. The backend must enforce this too — this
+ * within what is left in the pool. The backend enforces this too (422) — this
  * mirrors it so the admin sees the outcome before submitting the decision.
  */
 export function checkAllocation(
@@ -42,14 +49,14 @@ export function checkAllocation(
     reasons.push(
       `Upload short by ${formatMbps(uploadShortfall)} — requested ${formatMbps(
         requestedUpload,
-      )}, only ${formatMbps(uploadRemaining)} left.`,
+      )}, only ${formatMbps(uploadRemaining)} remaining.`,
     );
   }
   if (downloadShortfall > 0) {
     reasons.push(
       `Download short by ${formatMbps(downloadShortfall)} — requested ${formatMbps(
         requestedDownload,
-      )}, only ${formatMbps(downloadRemaining)} left.`,
+      )}, only ${formatMbps(downloadRemaining)} remaining.`,
     );
   }
 
@@ -61,31 +68,13 @@ export function checkAllocation(
   };
 }
 
-export function checkRequest(pool: BandwidthPool, request: ServiceRequest): AllocationCheck {
-  return checkAllocation(pool, request.requestedUpload, request.requestedDownload);
-}
-
-/** Pool state if every listed request were approved — used on the queue screen. */
-export function projectedAfter(
-  pool: BandwidthPool,
-  requests: ServiceRequest[],
-): BandwidthPool {
-  return requests.reduce<BandwidthPool>(
-    (acc, r) => ({
-      ...acc,
-      uploadAllocated: acc.uploadAllocated + r.requestedUpload,
-      downloadAllocated: acc.downloadAllocated + r.requestedDownload,
-    }),
-    pool,
-  );
+export function checkRequest(pool: BandwidthPool, request: BandwidthRequest): AllocationCheck {
+  return checkAllocation(pool, request.requestedUploadMbps, request.requestedDownloadMbps);
 }
 
 export function formatMbps(value: number): string {
-  if (!Number.isFinite(value)) return "—";
-  if (Math.abs(value) >= 1000) {
-    const gbps = value / 1000;
-    return `${trim(gbps)} Gbps`;
-  }
+  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  if (Math.abs(value) >= 1000) return `${trim(value / 1000)} Gbps`;
   return `${trim(value)} Mbps`;
 }
 
@@ -93,7 +82,7 @@ function trim(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
 }
 
-export function formatDate(value?: string): string {
+export function formatDate(value?: string | null): string {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;

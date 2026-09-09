@@ -8,6 +8,7 @@ import {
   EmptyState,
   ErrorNotice,
   PageHeading,
+  primaryLinkClass,
   StatCard,
   StatusBadge,
   Td,
@@ -92,7 +93,7 @@ export default async function AdminDashboard() {
       </div>
 
       {blocked.length > 0 ? (
-        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <strong className="font-semibold">{blocked.length}</strong>{" "}
           pending {blocked.length === 1 ? "request exceeds" : "requests exceed"} the capacity left
           in the assigned pool. Top up the pool before approving.{" "}
@@ -123,14 +124,14 @@ export default async function AdminDashboard() {
               action={
                 <Link
                   href="/admin/bandwidth"
-                  className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                  className={primaryLinkClass}
                 >
                   Create a pool
                 </Link>
               }
             />
           ) : (
-            <div className="space-y-6 px-5 py-5">
+            <div className="space-y-6 px-6 py-5">
               {pools.data.map((pool) => {
                 const a = availability(pool);
                 return (

@@ -8,6 +8,7 @@ import {
   EmptyState,
   ErrorNotice,
   PageHeading,
+  primaryLinkClass,
   Td,
   Th,
 } from "@/components/ui";
@@ -41,7 +42,7 @@ export default async function CustomersPage({
         action={
           <Link
             href="/admin/customers/new"
-            className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+            className={primaryLinkClass}
           >
             Register customer
           </Link>
@@ -55,7 +56,7 @@ export default async function CustomersPage({
       ) : null}
 
       <Card>
-        <div className="border-b border-slate-200 px-5 py-4">
+        <div className="border-b border-slate-200 px-6 py-4">
           <CustomerSearch initialQuery={q ?? ""} total={customers.length} shown={visible.length} />
         </div>
 
@@ -71,7 +72,7 @@ export default async function CustomersPage({
               query ? null : (
                 <Link
                   href="/admin/customers/new"
-                  className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                  className={primaryLinkClass}
                 >
                   Register customer
                 </Link>

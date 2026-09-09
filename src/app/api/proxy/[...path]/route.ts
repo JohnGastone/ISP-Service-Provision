@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { SPRING_API_URL } from "@/lib/api";
-import { getToken } from "@/lib/session";
+import { getCredential } from "@/lib/session";
 
 /**
- * Forwards `/api/proxy/<spring path>` to the Spring Boot API with the JWT from
- * the httpOnly cookie. Client components use this so the token never has to be
- * exposed to browser JavaScript.
+ * Forwards `/api/proxy/<spring path>` to the Spring Boot API with the Basic
+ * credential from the httpOnly cookie. Client components use this so the
+ * credential is never exposed to browser JavaScript, and because the call to
+ * Spring happens server-side the backend needs no CORS configuration.
  */
 async function forward(request: Request, path: string[]) {
-  const token = await getToken();
-  if (!token) {
-    return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+  const credential = await getCredential();
+  if (!credential) {
+    return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
   }
 
   const incoming = new URL(request.url);
@@ -26,14 +27,14 @@ async function forward(request: Request, path: string[]) {
       method,
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Basic ${credential}`,
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       body: body || undefined,
       cache: "no-store",
     });
   } catch {
-    return NextResponse.json({ message: "Cannot reach the API service" }, { status: 503 });
+    return NextResponse.json({ detail: "Cannot reach the API service" }, { status: 503 });
   }
 
   const text = await res.text();

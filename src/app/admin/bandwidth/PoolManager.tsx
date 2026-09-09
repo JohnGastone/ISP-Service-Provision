@@ -59,7 +59,7 @@ function CreatePool() {
   return (
     <Card className="sticky top-24">
       <CardHeader title="Create a pool" subtitle="Capacity the ISP has purchased upstream" />
-      <form onSubmit={onSubmit} noValidate className="space-y-5 px-5 py-5">
+      <form onSubmit={onSubmit} noValidate className="space-y-5 px-6 py-5">
         {formError ? <ErrorNotice message={formError} /> : null}
 
         <Field label="Pool name" htmlFor="pool-name" error={errors.name} hint="Optional, e.g. Dar Metro Fibre">

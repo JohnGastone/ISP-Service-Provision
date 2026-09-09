@@ -88,7 +88,7 @@ export default function CustomerForm({ customer }: Props) {
         }
       />
 
-      <form onSubmit={onSubmit} noValidate className="space-y-5 px-5 py-5">
+      <form onSubmit={onSubmit} noValidate className="space-y-5 px-6 py-5">
         {formError ? <ErrorNotice message={formError} /> : null}
 
         <Field label="Full name" htmlFor="name" error={errors.name}>

@@ -5,8 +5,14 @@ import type { AuthUser } from "@/lib/types";
  * server components and client components alike.
  */
 
-export const TOKEN_COOKIE = process.env.AUTH_COOKIE_NAME || "isp_token";
-/** Readable by middleware and the browser; holds no secret, only display/role data. */
+/**
+ * Holds the base64 `user:pass` for the API's HTTP Basic auth. The backend has
+ * no token endpoint, so the credential itself must be replayed on every call.
+ * It is kept httpOnly so browser JavaScript can never read it.
+ */
+export const AUTH_COOKIE = process.env.AUTH_COOKIE_NAME || "isp_auth";
+
+/** Readable by middleware and the browser; holds no secret, only display data. */
 export const USER_COOKIE = "isp_user";
 
 export function parseUserCookie(raw: string): AuthUser | null {

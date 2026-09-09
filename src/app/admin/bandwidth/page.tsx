@@ -58,7 +58,7 @@ export default async function BandwidthPage() {
           {pools.length === 0 ? (
             <Card>
               <CardHeader title="Pools" subtitle="No pools created yet" />
-              <p className="px-5 py-10 text-center text-sm text-slate-500">
+              <p className="px-6 py-10 text-center text-sm text-slate-500">
                 Create a pool using the form to start allocating bandwidth.
               </p>
             </Card>
@@ -71,7 +71,7 @@ export default async function BandwidthPage() {
                     title={pool.name ?? `Pool #${pool.id}`}
                     subtitle={`Pool ID ${pool.id}`}
                   />
-                  <div className="space-y-5 px-5 py-5">
+                  <div className="space-y-5 px-6 py-5">
                     <UsageBar
                       label="Download"
                       usedPct={a.downloadUsedPct}

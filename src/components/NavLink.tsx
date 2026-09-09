@@ -20,12 +20,18 @@ export function NavLink({ item }: { item: NavItem }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "block rounded-lg px-3 py-2 text-sm font-medium transition",
+        "relative block rounded-xl px-3.5 py-2.5 text-sm font-semibold transition duration-150",
         active
-          ? "bg-brand-50 text-brand-700"
-          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+          ? "bg-white text-brand-700 shadow-card ring-1 ring-brand-100"
+          : "text-slate-600 hover:bg-white/70 hover:text-slate-900",
       )}
     >
+      {active ? (
+        <span
+          className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-brand-600"
+          aria-hidden="true"
+        />
+      ) : null}
       {item.label}
     </Link>
   );

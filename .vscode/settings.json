@@ -1,0 +1,10 @@
+{
+  // Tailwind v4 uses at-rules (@theme, @apply, @import "tailwindcss") that the
+  // built-in CSS validator does not recognise. Silence those false positives.
+  "css.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "files.associations": {
+    "*.css": "tailwindcss"
+  }
+}

@@ -17,7 +17,7 @@ export class ClientApiError extends Error {
   }
 }
 
-async function request<T>(url: string, init: RequestInit & { body?: unknown } = {}): Promise<T> {
+async function request<T>(url: string, init: Omit<RequestInit, "body"> & { body?: unknown } = {}): Promise<T> {
   const { body, headers, ...rest } = init;
 
   let res: Response;
@@ -74,12 +74,12 @@ function springFieldErrors(d: Record<string, unknown>): Record<string, string> |
 }
 
 /** Calls a Spring Boot path, e.g. api("/api/customers"). */
-export function api<T>(path: string, init?: RequestInit & { body?: unknown }): Promise<T> {
+export function api<T>(path: string, init?: Omit<RequestInit, "body"> & { body?: unknown }): Promise<T> {
   const clean = path.startsWith("/") ? path.slice(1) : path;
   return request<T>(`/api/proxy/${clean}`, init);
 }
 
 /** Calls a route handler on this Next app, e.g. local("/api/auth/login"). */
-export function local<T>(path: string, init?: RequestInit & { body?: unknown }): Promise<T> {
+export function local<T>(path: string, init?: Omit<RequestInit, "body"> & { body?: unknown }): Promise<T> {
   return request<T>(path, init);
 }

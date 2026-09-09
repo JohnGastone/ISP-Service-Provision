@@ -16,23 +16,33 @@ export default function AppShell({
   const home = user.role === "ADMIN" ? "/admin" : "/customer";
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
+    <div className="app-backdrop min-h-screen bg-slate-50">
+      <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Link href={home} className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">
+          <Link href={home} className="flex items-center gap-3 rounded-lg">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-[0.7rem] font-extrabold tracking-tight text-white shadow-sm">
               ISP
             </span>
-            <span className="text-sm font-semibold text-slate-900">Service Provision</span>
+            <span className="text-[0.95rem] font-bold tracking-tight text-slate-900">
+              Service Provision
+            </span>
           </Link>
 
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-tight text-slate-900">{user.fullName}</p>
-              <p className="text-xs leading-tight text-slate-500">
+              <p className="text-sm font-semibold leading-tight text-slate-900">
+                {user.fullName}
+              </p>
+              <p className="text-xs font-medium leading-tight text-slate-500">
                 {user.role === "ADMIN" ? "Administrator" : "Customer"}
               </p>
             </div>
+            <span
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700"
+              aria-hidden="true"
+            >
+              {initials(user.fullName)}
+            </span>
             <LogoutButton />
           </div>
         </div>
@@ -51,7 +61,7 @@ export default function AppShell({
           {/* Horizontal nav on small screens, where the sidebar is hidden. */}
           <nav
             aria-label="Main"
-            className="mb-6 flex gap-1 overflow-x-auto border-b border-slate-200 pb-3 md:hidden"
+            className="mb-6 flex gap-1.5 overflow-x-auto border-b border-slate-200 pb-3 md:hidden"
           >
             {nav.map((item) => (
               <div key={item.href} className="shrink-0">
@@ -65,4 +75,10 @@ export default function AppShell({
       </div>
     </div>
   );
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }

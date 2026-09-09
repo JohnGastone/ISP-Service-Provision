@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { ApiRequestError, SPRING_API_URL, handle } from "@/lib/api";
+import { ApiRequestError, verifyCredential } from "@/lib/api";
 import { setSession } from "@/lib/session";
 import { loginSchema } from "@/lib/validation";
-import type { LoginResponse } from "@/lib/types";
+import type { AuthUser } from "@/lib/types";
 
 export async function POST(request: Request) {
   let payload: unknown;
@@ -20,35 +20,32 @@ export async function POST(request: Request) {
     );
   }
 
+  const { username, password } = parsed.data;
+  // The API uses HTTP Basic on every call, so the credential is what we store.
+  const credential = Buffer.from(`${username}:${password}`, "utf8").toString("base64");
+
   try {
-    const res = await fetch(`${SPRING_API_URL}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(parsed.data),
-      cache: "no-store",
-    });
+    const principal = await verifyCredential(credential);
 
-    const data = await handle<LoginResponse>(res);
-    if (!data?.token || !data?.user) {
-      return NextResponse.json(
-        { message: "Unexpected response from the authentication service" },
-        { status: 502 },
-      );
-    }
+    const user: AuthUser = {
+      username: principal.username,
+      fullName: principal.username,
+      role: principal.admin ? "ADMIN" : "CUSTOMER",
+    };
 
-    await setSession(data.token, data.user);
-    // The token stays server-side; the browser only learns who it is signed in as.
-    return NextResponse.json({ user: data.user });
+    await setSession(credential, user);
+    // The credential stays in the httpOnly cookie; only display data is returned.
+    return NextResponse.json({ user });
   } catch (error) {
     if (error instanceof ApiRequestError) {
       const message =
         error.status === 401 || error.status === 403
-          ? "Incorrect email or password"
+          ? "Incorrect username or password"
           : error.message;
       return NextResponse.json({ message }, { status: error.status });
     }
     return NextResponse.json(
-      { message: "Cannot reach the authentication service. Is the API running?" },
+      { message: "Cannot reach the API service. Is the Spring Boot backend running?" },
       { status: 503 },
     );
   }
