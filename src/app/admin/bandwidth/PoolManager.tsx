@@ -5,21 +5,13 @@ import { useRouter } from "next/navigation";
 import { Button, Field, Input } from "@/components/form";
 import { Card, CardHeader, ErrorNotice } from "@/components/ui";
 import { ClientApiError, api } from "@/lib/client-api";
-import { formatMbps } from "@/lib/bandwidth";
+import { availability, formatMbps } from "@/lib/bandwidth";
 import { bandwidthPoolSchema, fieldErrorsOf } from "@/lib/validation";
 import type { BandwidthPool } from "@/lib/types";
 
-type Props =
-  | { mode: "create"; pool?: undefined }
-  | { mode: "top-up"; pool: BandwidthPool };
-
-export default function PoolManager(props: Props) {
-  return props.mode === "create" ? <CreatePool /> : <TopUpPool pool={props.pool} />;
-}
-
-function CreatePool() {
+export function CreatePool() {
   const router = useRouter();
-  const [values, setValues] = useState({ name: "", totalDownload: "", totalUpload: "" });
+  const [values, setValues] = useState({ totalDownloadMbps: "", totalUploadMbps: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -27,6 +19,7 @@ function CreatePool() {
   function update(key: keyof typeof values, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
     setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
+    setFormError(null);
   }
 
   async function onSubmit(event: React.FormEvent) {
@@ -34,9 +27,8 @@ function CreatePool() {
     setFormError(null);
 
     const parsed = bandwidthPoolSchema.safeParse({
-      name: values.name.trim() || undefined,
-      totalDownload: toNumber(values.totalDownload),
-      totalUpload: toNumber(values.totalUpload),
+      totalDownloadMbps: toNumber(values.totalDownloadMbps),
+      totalUploadMbps: toNumber(values.totalUploadMbps),
     });
 
     if (!parsed.success) {
@@ -46,8 +38,8 @@ function CreatePool() {
 
     setSubmitting(true);
     try {
-      await api("/api/bandwidth-pools", { method: "POST", body: parsed.data });
-      setValues({ name: "", totalDownload: "", totalUpload: "" });
+      await api("/api/bandwidth/pools", { method: "POST", body: parsed.data });
+      setValues({ totalDownloadMbps: "", totalUploadMbps: "" });
       router.refresh();
     } catch (error) {
       setFormError(error instanceof ClientApiError ? error.message : "Could not create the pool.");
@@ -58,45 +50,39 @@ function CreatePool() {
 
   return (
     <Card className="sticky top-24">
-      <CardHeader title="Create a pool" subtitle="Capacity the ISP has purchased upstream" />
+      <CardHeader title="Create a pool" subtitle="Capacity purchased upstream" />
       <form onSubmit={onSubmit} noValidate className="space-y-5 px-6 py-5">
         {formError ? <ErrorNotice message={formError} /> : null}
 
-        <Field label="Pool name" htmlFor="pool-name" error={errors.name} hint="Optional, e.g. Dar Metro Fibre">
-          <Input
-            id="pool-name"
-            value={values.name}
-            invalid={Boolean(errors.name)}
-            placeholder="Dar Metro Fibre"
-            onChange={(e) => update("name", e.target.value)}
-          />
-        </Field>
-
-        <Field label="Total download (Mbps)" htmlFor="total-download" error={errors.totalDownload}>
+        <Field
+          label="Total download (Mbps)"
+          htmlFor="total-download"
+          error={errors.totalDownloadMbps}
+        >
           <Input
             id="total-download"
             type="number"
             min="0"
             step="any"
             inputMode="decimal"
-            placeholder="10000"
-            value={values.totalDownload}
-            invalid={Boolean(errors.totalDownload)}
-            onChange={(e) => update("totalDownload", e.target.value)}
+            placeholder="1000"
+            value={values.totalDownloadMbps}
+            invalid={Boolean(errors.totalDownloadMbps)}
+            onChange={(e) => update("totalDownloadMbps", e.target.value)}
           />
         </Field>
 
-        <Field label="Total upload (Mbps)" htmlFor="total-upload" error={errors.totalUpload}>
+        <Field label="Total upload (Mbps)" htmlFor="total-upload" error={errors.totalUploadMbps}>
           <Input
             id="total-upload"
             type="number"
             min="0"
             step="any"
             inputMode="decimal"
-            placeholder="5000"
-            value={values.totalUpload}
-            invalid={Boolean(errors.totalUpload)}
-            onChange={(e) => update("totalUpload", e.target.value)}
+            placeholder="1000"
+            value={values.totalUploadMbps}
+            invalid={Boolean(errors.totalUploadMbps)}
+            onChange={(e) => update("totalUploadMbps", e.target.value)}
           />
         </Field>
 
@@ -108,42 +94,59 @@ function CreatePool() {
   );
 }
 
-function TopUpPool({ pool }: { pool: BandwidthPool }) {
+/**
+ * Adjusts a pool's totals. The API rejects (422) any total below what approved
+ * requests already hold, so the allocated figure is shown as the floor.
+ */
+export function EditPoolTotals({ pool }: { pool: BandwidthPool }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [addDownload, setAddDownload] = useState("");
-  const [addUpload, setAddUpload] = useState("");
+  const [download, setDownload] = useState(String(pool.totalDownloadMbps));
+  const [upload, setUpload] = useState(String(pool.totalUploadMbps));
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const a = availability(pool);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setFormError(null);
 
-    const down = toNumber(addDownload) ?? 0;
-    const up = toNumber(addUpload) ?? 0;
+    const parsed = bandwidthPoolSchema.safeParse({
+      totalDownloadMbps: toNumber(download),
+      totalUploadMbps: toNumber(upload),
+    });
 
-    if (down <= 0 && up <= 0) {
-      setFormError("Enter an amount to add to at least one direction.");
+    if (!parsed.success) {
+      setErrors(fieldErrorsOf(parsed.error));
       return;
     }
-    if (down < 0 || up < 0) {
-      setFormError("Top-up amounts cannot be negative.");
+
+    // Mirror the backend's 422 rule so the admin is told before submitting.
+    const local: Record<string, string> = {};
+    if (parsed.data.totalDownloadMbps < pool.downloadAllocatedMbps) {
+      local.totalDownloadMbps = `Cannot go below ${formatMbps(
+        pool.downloadAllocatedMbps,
+      )} already allocated`;
+    }
+    if (parsed.data.totalUploadMbps < pool.uploadAllocatedMbps) {
+      local.totalUploadMbps = `Cannot go below ${formatMbps(
+        pool.uploadAllocatedMbps,
+      )} already allocated`;
+    }
+    if (Object.keys(local).length) {
+      setErrors(local);
       return;
     }
 
     setSubmitting(true);
     try {
-      await api(`/api/bandwidth-pools/${pool.id}/top-up`, {
-        method: "POST",
-        body: { addUpload: up, addDownload: down },
-      });
-      setAddDownload("");
-      setAddUpload("");
+      await api(`/api/bandwidth/pools/${pool.id}`, { method: "PUT", body: parsed.data });
       setOpen(false);
       router.refresh();
     } catch (error) {
-      setFormError(error instanceof ClientApiError ? error.message : "Could not top up the pool.");
+      setFormError(error instanceof ClientApiError ? error.message : "Could not update the pool.");
     } finally {
       setSubmitting(false);
     }
@@ -151,64 +154,73 @@ function TopUpPool({ pool }: { pool: BandwidthPool }) {
 
   if (!open) {
     return (
-      <div className="border-t border-slate-200 pt-4">
+      <div className="border-t border-slate-100 pt-4">
         <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
-          Add capacity
+          Adjust capacity
         </Button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-4 border-t border-slate-200 pt-4">
+    <form onSubmit={onSubmit} noValidate className="space-y-4 border-t border-slate-100 pt-4">
       {formError ? <ErrorNotice message={formError} /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
-          label="Add download (Mbps)"
-          htmlFor={`add-download-${pool.id}`}
-          hint={`Currently ${formatMbps(pool.totalDownload)}`}
+          label="Total download (Mbps)"
+          htmlFor={`edit-download-${pool.id}`}
+          error={errors.totalDownloadMbps}
+          hint={`${formatMbps(pool.downloadAllocatedMbps)} allocated · ${formatMbps(
+            a.downloadRemaining,
+          )} free`}
         >
           <Input
-            id={`add-download-${pool.id}`}
+            id={`edit-download-${pool.id}`}
             type="number"
             min="0"
             step="any"
             inputMode="decimal"
-            placeholder="0"
-            value={addDownload}
-            onChange={(e) => setAddDownload(e.target.value)}
+            value={download}
+            invalid={Boolean(errors.totalDownloadMbps)}
+            onChange={(e) => setDownload(e.target.value)}
           />
         </Field>
 
         <Field
-          label="Add upload (Mbps)"
-          htmlFor={`add-upload-${pool.id}`}
-          hint={`Currently ${formatMbps(pool.totalUpload)}`}
+          label="Total upload (Mbps)"
+          htmlFor={`edit-upload-${pool.id}`}
+          error={errors.totalUploadMbps}
+          hint={`${formatMbps(pool.uploadAllocatedMbps)} allocated · ${formatMbps(
+            a.uploadRemaining,
+          )} free`}
         >
           <Input
-            id={`add-upload-${pool.id}`}
+            id={`edit-upload-${pool.id}`}
             type="number"
             min="0"
             step="any"
             inputMode="decimal"
-            placeholder="0"
-            value={addUpload}
-            onChange={(e) => setAddUpload(e.target.value)}
+            value={upload}
+            invalid={Boolean(errors.totalUploadMbps)}
+            onChange={(e) => setUpload(e.target.value)}
           />
         </Field>
       </div>
 
       <div className="flex gap-3">
         <Button type="submit" loading={submitting}>
-          Add capacity
+          Save totals
         </Button>
         <Button
           type="button"
           variant="secondary"
           onClick={() => {
             setOpen(false);
+            setErrors({});
             setFormError(null);
+            setDownload(String(pool.totalDownloadMbps));
+            setUpload(String(pool.totalUploadMbps));
           }}
         >
           Cancel

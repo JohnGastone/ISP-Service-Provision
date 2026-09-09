@@ -9,11 +9,11 @@ export default function NewCustomerPage() {
     <>
       <PageHeading
         title="Register customer"
-        subtitle="Create the account, then share the sign-in details with the customer."
+        subtitle="The email must be unique; the phone number must be a Tanzanian mobile."
         action={
           <Link
             href="/admin/customers"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900"
+            className="text-sm font-semibold text-slate-600 hover:text-slate-900"
           >
             ← Back to customers
           </Link>
