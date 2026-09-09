@@ -20,8 +20,8 @@ export const metadata = { title: "My requests" };
 export default async function CustomerRequestsPage() {
   const [requests, pools] = await Promise.all([
     safeLoad<BandwidthRequest[]>(listMyRequests, []),
-    // Listing pools is admin-only, so this is expected to fail for customers —
-    // the form falls back to a plain pool-id field.
+    // Customers may list pools (only create-pool is admin-only), so the form
+    // can offer them by name with their free capacity.
     safeLoad<BandwidthPool[]>(listPools, []),
   ]);
 

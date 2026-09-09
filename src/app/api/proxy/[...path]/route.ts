@@ -32,9 +32,14 @@ async function forward(request: Request, path: string[]) {
       },
       body: body || undefined,
       cache: "no-store",
+      signal: AbortSignal.timeout(Number(process.env.API_TIMEOUT_MS) || 6000),
     });
-  } catch {
-    return NextResponse.json({ detail: "Cannot reach the API service" }, { status: 503 });
+  } catch (error) {
+    console.error(`[proxy] ${method} ${target} failed:`, error);
+    return NextResponse.json(
+      { detail: `Cannot reach the API service at ${SPRING_API_URL}` },
+      { status: 503 },
+    );
   }
 
   const text = await res.text();

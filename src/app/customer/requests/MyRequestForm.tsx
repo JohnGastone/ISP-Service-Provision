@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, Field, Input, Select } from "@/components/form";
 import { Card, CardHeader, ErrorNotice } from "@/components/ui";
 import { ClientApiError, api } from "@/lib/client-api";
-import { availability, formatMbps } from "@/lib/bandwidth";
+import { availability, checkAllocation, formatMbps } from "@/lib/bandwidth";
 import { fieldErrorsOf, myRequestSchema } from "@/lib/validation";
 import type { BandwidthPool } from "@/lib/types";
 
@@ -33,6 +33,16 @@ export default function MyRequestForm({
     setSuccess(false);
     setFormError(null);
   }
+
+  // Live capacity preview against the chosen pool, so the customer knows
+  // whether the request can realistically be approved.
+  const selectedPool = pools.find((p) => String(p.id) === values.poolId) ?? null;
+  const down = Number(values.requestedDownloadMbps);
+  const up = Number(values.requestedUploadMbps);
+  const preview =
+    selectedPool && Number.isFinite(down) && Number.isFinite(up) && (down > 0 || up > 0)
+      ? checkAllocation(selectedPool, up || 0, down || 0)
+      : null;
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -89,47 +99,43 @@ export default function MyRequestForm({
           </div>
         ) : null}
 
-        {/* Customers cannot list pools, so fall back to entering the id. */}
-        {pools.length > 0 ? (
-          <Field label="Service pool" htmlFor="poolId" error={errors.poolId}>
-            <Select
-              id="poolId"
-              value={values.poolId}
-              invalid={Boolean(errors.poolId)}
-              onChange={(e) => update("poolId", e.target.value)}
-            >
-              <option value="">Select a pool…</option>
-              {pools.map((p) => {
-                const a = availability(p);
-                return (
-                  <option key={p.id} value={p.id}>
-                    Pool #{p.id} — {formatMbps(a.downloadRemaining)} ↓ /{" "}
-                    {formatMbps(a.uploadRemaining)} ↑ free
-                  </option>
-                );
-              })}
-            </Select>
-          </Field>
-        ) : (
-          <Field
-            label="Service pool"
-            htmlFor="poolId"
-            error={errors.poolId}
-            hint="The pool number given to you by the ISP"
+        <Field
+          label="Service pool"
+          htmlFor="poolId"
+          error={errors.poolId}
+          hint={
+            pools.length > 0
+              ? "Free capacity shown per pool — pick one that can cover your request."
+              : undefined
+          }
+        >
+          <Select
+            id="poolId"
+            value={values.poolId}
+            invalid={Boolean(errors.poolId)}
+            disabled={pools.length === 0}
+            onChange={(e) => update("poolId", e.target.value)}
           >
-            <Input
-              id="poolId"
-              type="number"
-              min="1"
-              step="1"
-              inputMode="numeric"
-              placeholder="1"
-              value={values.poolId}
-              invalid={Boolean(errors.poolId)}
-              onChange={(e) => update("poolId", e.target.value)}
-            />
-          </Field>
-        )}
+            <option value="">
+              {pools.length === 0 ? "No pools available" : "Select a pool…"}
+            </option>
+            {pools.map((p) => {
+              const a = availability(p);
+              return (
+                <option key={p.id} value={p.id}>
+                  Pool #{p.id} — {formatMbps(a.downloadRemaining)} ↓ /{" "}
+                  {formatMbps(a.uploadRemaining)} ↑ free
+                </option>
+              );
+            })}
+          </Select>
+        </Field>
+
+        {pools.length === 0 ? (
+          <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-slate-600">
+            No bandwidth pools could be loaded. Please contact the ISP administrator.
+          </p>
+        ) : null}
 
         <Field
           label="Download (Mbps)"
@@ -167,7 +173,26 @@ export default function MyRequestForm({
           />
         </Field>
 
-        <Button type="submit" loading={submitting} className="w-full">
+        {preview ? (
+          <p
+            className={
+              preview.ok
+                ? "rounded-xl bg-accent-50 px-3.5 py-2.5 text-xs font-medium text-accent-800"
+                : "rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs font-medium text-amber-900"
+            }
+          >
+            {preview.ok
+              ? "This pool has enough free capacity for your request."
+              : "This exceeds the pool's free capacity — the administrator may not be able to approve it yet."}
+          </p>
+        ) : null}
+
+        <Button
+          type="submit"
+          loading={submitting}
+          disabled={pools.length === 0}
+          className="w-full"
+        >
           Submit request
         </Button>
       </form>

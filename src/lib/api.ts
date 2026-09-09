@@ -38,19 +38,48 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
   const { body, credential, headers, ...rest } = options;
   const auth = credential ?? (await getCredential());
 
-  const res = await fetch(`${SPRING_API_URL}${path}`, {
-    ...rest,
-    headers: {
-      Accept: "application/json",
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...(auth ? { Authorization: `Basic ${auth}` } : {}),
-      ...(headers as Record<string, string> | undefined),
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${SPRING_API_URL}${path}`, {
+      ...rest,
+      headers: {
+        Accept: "application/json",
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(auth ? { Authorization: `Basic ${auth}` } : {}),
+        ...(headers as Record<string, string> | undefined),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+      // Without this, an unreachable host hangs on the OS connect timeout
+      // (~10s+) before the user sees anything.
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
+  } catch (error) {
+    throw new ApiUnreachableError(`${SPRING_API_URL}${path}`, error);
+  }
 
   return handle<T>(res);
+}
+
+const API_TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS) || 6000;
+
+/** The backend could not be contacted at all — distinct from an error response. */
+export class ApiUnreachableError extends Error {
+  target: string;
+  cause?: unknown;
+
+  constructor(target: string, cause?: unknown) {
+    const timedOut =
+      cause instanceof Error && (cause.name === "TimeoutError" || cause.name === "AbortError");
+    super(
+      timedOut
+        ? `No response from ${target} within ${API_TIMEOUT_MS}ms.`
+        : `Could not connect to ${target}.`,
+    );
+    this.name = "ApiUnreachableError";
+    this.target = target;
+    this.cause = cause;
+  }
 }
 
 export async function handle<T>(res: Response): Promise<T> {

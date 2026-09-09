@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { ApiRequestError, verifyCredential } from "@/lib/api";
+import {
+  ApiRequestError,
+  ApiUnreachableError,
+  SPRING_API_URL,
+  verifyCredential,
+} from "@/lib/api";
 import { setSession } from "@/lib/session";
 import { loginSchema } from "@/lib/validation";
 import type { AuthUser } from "@/lib/types";
@@ -47,8 +52,16 @@ export async function POST(request: Request) {
           : error.message;
       return NextResponse.json({ message }, { status: error.status });
     }
+    // Naming the host it tried turns "is it running?" into something checkable.
+    const detail =
+      error instanceof ApiUnreachableError
+        ? ` (${error.message})`
+        : ` (target: ${SPRING_API_URL})`;
+
+    console.error("[auth/login] backend unreachable:", error);
+
     return NextResponse.json(
-      { message: "Cannot reach the API service. Is the Spring Boot backend running?" },
+      { message: `Cannot reach the API service${detail}` },
       { status: 503 },
     );
   }
