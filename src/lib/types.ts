@@ -83,6 +83,14 @@ export interface BandwidthRequestPayload {
   requestedDownloadMbps: number;
 }
 
+/** Derived pool figures — computed client-side so the UI can preview a decision. */
+export interface PoolAvailability {
+  uploadRemaining: number;
+  downloadRemaining: number;
+  uploadUsedPct: number;
+  downloadUsedPct: number;
+}
+
 /** RFC 9457 ProblemDetail, as returned by every error path. */
 export interface ProblemDetail {
   type?: string;

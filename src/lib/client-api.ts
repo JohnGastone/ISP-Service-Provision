@@ -1,23 +1,50 @@
 "use client";
 
 /**
- * Browser-side calls. Every request goes through /api/proxy/* so the JWT stays
- * in the httpOnly cookie and is attached server-side.
+ * Browser-side calls. Every request goes through /api/proxy/* so the Basic
+ * credential stays in the httpOnly cookie and is attached server-side.
  */
 
 export class ClientApiError extends Error {
   status: number;
-  fieldErrors?: Record<string, string>;
 
-  constructor(message: string, status: number, fieldErrors?: Record<string, string>) {
+  constructor(message: string, status: number) {
     super(message);
     this.name = "ClientApiError";
     this.status = status;
-    this.fieldErrors = fieldErrors;
   }
 }
 
-async function request<T>(url: string, init: Omit<RequestInit, "body"> & { body?: unknown } = {}): Promise<T> {
+function messageFor(data: unknown, status: number): string {
+  if (data && typeof data === "object") {
+    const d = data as Record<string, unknown>;
+    // RFC 9457 ProblemDetail — `detail` carries the useful part.
+    for (const key of ["detail", "title", "message"]) {
+      if (typeof d[key] === "string" && (d[key] as string).trim()) return d[key] as string;
+    }
+  }
+  switch (status) {
+    case 400:
+      return "The details supplied were rejected by the server.";
+    case 401:
+      return "Your session has expired. Please sign in again.";
+    case 403:
+      return "You do not have permission to do that.";
+    case 404:
+      return "That record could not be found.";
+    case 409:
+      return "This request has already been decided.";
+    case 422:
+      return "The request could not be fulfilled.";
+    default:
+      return `Request failed (${status})`;
+  }
+}
+
+async function request<T>(
+  url: string,
+  init: Omit<RequestInit, "body"> & { body?: unknown } = {},
+): Promise<T> {
   const { body, headers, ...rest } = init;
 
   let res: Response;
@@ -41,45 +68,34 @@ async function request<T>(url: string, init: Omit<RequestInit, "body"> & { body?
     try {
       data = JSON.parse(text);
     } catch {
-      data = { message: text };
+      data = { detail: text };
     }
   }
 
   if (!res.ok) {
-    const d = (data ?? {}) as Record<string, unknown>;
-    // A 401 means the session lapsed — send the user back to sign in.
+    // A 401 means the stored credential no longer works — sign in again.
     if (res.status === 401 && typeof window !== "undefined") {
       window.location.href = "/login";
     }
-    throw new ClientApiError(
-      (typeof d.message === "string" && d.message) || `Request failed (${res.status})`,
-      res.status,
-      (d.fieldErrors as Record<string, string> | undefined) ?? springFieldErrors(d),
-    );
+    throw new ClientApiError(messageFor(data, res.status), res.status);
   }
 
   return data as T;
 }
 
-function springFieldErrors(d: Record<string, unknown>): Record<string, string> | undefined {
-  if (!Array.isArray(d.errors)) return undefined;
-  const out: Record<string, string> = {};
-  for (const e of d.errors) {
-    if (e && typeof e === "object") {
-      const { field, defaultMessage, message } = e as Record<string, unknown>;
-      if (typeof field === "string") out[field] = String(defaultMessage ?? message ?? "Invalid value");
-    }
-  }
-  return Object.keys(out).length ? out : undefined;
-}
-
 /** Calls a Spring Boot path, e.g. api("/api/customers"). */
-export function api<T>(path: string, init?: Omit<RequestInit, "body"> & { body?: unknown }): Promise<T> {
+export function api<T>(
+  path: string,
+  init?: Omit<RequestInit, "body"> & { body?: unknown },
+): Promise<T> {
   const clean = path.startsWith("/") ? path.slice(1) : path;
   return request<T>(`/api/proxy/${clean}`, init);
 }
 
 /** Calls a route handler on this Next app, e.g. local("/api/auth/login"). */
-export function local<T>(path: string, init?: Omit<RequestInit, "body"> & { body?: unknown }): Promise<T> {
+export function local<T>(
+  path: string,
+  init?: Omit<RequestInit, "body"> & { body?: unknown },
+): Promise<T> {
   return request<T>(path, init);
 }

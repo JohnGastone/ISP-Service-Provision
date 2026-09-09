@@ -14,12 +14,12 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next");
 
-  const [values, setValues] = useState({ email: "", password: "" });
+  const [values, setValues] = useState({ username: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  function update(key: "email" | "password", value: string) {
+  function update(key: "username" | "password", value: string) {
     setValues((v) => ({ ...v, [key]: value }));
     setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
   }
@@ -50,12 +50,11 @@ export default function LoginForm() {
       router.replace(target);
       router.refresh();
     } catch (error) {
-      if (error instanceof ClientApiError) {
-        setFormError(error.message);
-        if (error.fieldErrors) setErrors(error.fieldErrors);
-      } else {
-        setFormError("Something went wrong. Please try again.");
-      }
+      setFormError(
+        error instanceof ClientApiError
+          ? error.message
+          : "Something went wrong. Please try again.",
+      );
       setSubmitting(false);
     }
   }
@@ -64,17 +63,17 @@ export default function LoginForm() {
     <form onSubmit={onSubmit} noValidate className="space-y-5">
       {formError ? <ErrorNotice message={formError} /> : null}
 
-      <Field label="Email address" htmlFor="email" error={errors.email}>
+      <Field label="Username" htmlFor="username" error={errors.username}>
         <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
+          id="username"
+          name="username"
+          type="text"
+          autoComplete="username"
           autoFocus
-          placeholder="you@example.com"
-          value={values.email}
-          invalid={Boolean(errors.email)}
-          onChange={(e) => update("email", e.target.value)}
+          placeholder="admin"
+          value={values.username}
+          invalid={Boolean(errors.username)}
+          onChange={(e) => update("username", e.target.value)}
         />
       </Field>
 

@@ -5,25 +5,19 @@ import { useRouter } from "next/navigation";
 import { Button, Field, Input, Select } from "@/components/form";
 import { Card, CardHeader, ErrorNotice } from "@/components/ui";
 import { ClientApiError, api } from "@/lib/client-api";
-import { TZ_REGIONS, districtsFor, formatTzPhone } from "@/lib/tz";
+import { TZ_REGIONS, districtsFor, formatTzPhone, toE164 } from "@/lib/tz";
 import { customerSchema, fieldErrorsOf } from "@/lib/validation";
 import type { Customer } from "@/lib/types";
 
-interface Props {
-  /** Present when editing an existing customer. */
-  customer?: Customer;
-}
-
-export default function CustomerForm({ customer }: Props) {
+export default function CustomerForm() {
   const router = useRouter();
-  const editing = Boolean(customer);
 
   const [values, setValues] = useState({
-    name: customer?.name ?? "",
-    email: customer?.email ?? "",
-    phone: customer?.phone ?? "",
-    region: customer?.location?.region ?? "",
-    district: customer?.location?.district ?? "",
+    name: "",
+    email: "",
+    phone: "",
+    region: "",
+    district: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -38,6 +32,7 @@ export default function CustomerForm({ customer }: Props) {
       return { ...v, [key]: value };
     });
     setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
+    setFormError(null);
   }
 
   async function onSubmit(event: React.FormEvent) {
@@ -50,26 +45,27 @@ export default function CustomerForm({ customer }: Props) {
       return;
     }
 
+    // The API accepts a nested `location` even though it returns it flattened.
     const payload = {
       name: parsed.data.name,
       email: parsed.data.email,
-      phone: parsed.data.phone,
+      phone: toE164(parsed.data.phone),
       location: { region: parsed.data.region, district: parsed.data.district },
     };
 
     setSubmitting(true);
     try {
-      if (editing) {
-        await api(`/api/customers/${customer!.id}`, { method: "PUT", body: payload });
-      } else {
-        await api("/api/customers", { method: "POST", body: payload });
-      }
-      router.push("/admin/customers");
+      const created = await api<Customer>("/api/customers", { method: "POST", body: payload });
+      router.push(`/admin/customers?created=${encodeURIComponent(created?.name ?? "Customer")}`);
       router.refresh();
     } catch (error) {
       if (error instanceof ClientApiError) {
         setFormError(error.message);
-        if (error.fieldErrors) setErrors(mapServerFields(error.fieldErrors));
+        // A duplicate email is reported in the ProblemDetail text; surface it
+        // on the field the admin needs to change.
+        if (/email/i.test(error.message) && /exist/i.test(error.message)) {
+          setErrors((e) => ({ ...e, email: "A customer with this email already exists" }));
+        }
       } else {
         setFormError("Something went wrong. Please try again.");
       }
@@ -80,12 +76,8 @@ export default function CustomerForm({ customer }: Props) {
   return (
     <Card>
       <CardHeader
-        title={editing ? "Edit customer" : "Register a customer"}
-        subtitle={
-          editing
-            ? "Update the customer's contact and service address details."
-            : "The customer receives sign-in credentials once their account is created."
-        }
+        title="Register a customer"
+        subtitle="Name, email, a Tanzanian mobile number and the service location."
       />
 
       <form onSubmit={onSubmit} noValidate className="space-y-5 px-6 py-5">
@@ -95,7 +87,7 @@ export default function CustomerForm({ customer }: Props) {
           <Input
             id="name"
             name="name"
-            autoComplete="name"
+            autoComplete="organization"
             placeholder="Asha Juma Mwinyi"
             value={values.name}
             invalid={Boolean(errors.name)}
@@ -110,7 +102,7 @@ export default function CustomerForm({ customer }: Props) {
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="asha@example.co.tz"
+              placeholder="ops@acme.co.tz"
               value={values.email}
               invalid={Boolean(errors.email)}
               onChange={(e) => update("email", e.target.value)}
@@ -123,7 +115,7 @@ export default function CustomerForm({ customer }: Props) {
             error={errors.phone}
             hint={
               values.phone && !errors.phone
-                ? `Saved as ${formatTzPhone(values.phone)}`
+                ? `Sent as ${toE164(values.phone)}`
                 : "Tanzanian mobile, e.g. 0712345678 or +255712345678"
             }
           >
@@ -187,9 +179,9 @@ export default function CustomerForm({ customer }: Props) {
           </Field>
         </fieldset>
 
-        <div className="flex items-center gap-3 border-t border-slate-200 pt-5">
+        <div className="flex items-center gap-3 border-t border-slate-100 pt-5">
           <Button type="submit" loading={submitting}>
-            {editing ? "Save changes" : "Register customer"}
+            Register customer
           </Button>
           <Button type="button" variant="secondary" onClick={() => router.back()}>
             Cancel
@@ -200,11 +192,7 @@ export default function CustomerForm({ customer }: Props) {
   );
 }
 
-/** Spring reports nested paths like `location.region`; the form keys are flat. */
-function mapServerFields(fields: Record<string, string>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, message] of Object.entries(fields)) {
-    out[key.replace(/^location\./, "")] = message;
-  }
-  return out;
+/** Kept for the details view, which renders the flattened response shape. */
+export function formatCustomerPhone(phone: string): string {
+  return formatTzPhone(phone);
 }
