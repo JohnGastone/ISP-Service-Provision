@@ -1,1 +1,0 @@
-self.__NEXT_FONT_MANIFEST='{"pages":{},"app":{"/home/administrator/Desktop/Crafting/Frontend/ISP-Service-Provision/src/app/layout":["static/media/a838cfed199e32f6-s.p.woff2"]},"appUsingSizeAdjust":true,"pagesUsingSizeAdjust":false}';
