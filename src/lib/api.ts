@@ -1,4 +1,3 @@
-import "server-only";
 import { getToken } from "@/lib/session";
 import type {
   BandwidthPool,

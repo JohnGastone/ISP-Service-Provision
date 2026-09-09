@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9ebff;
+  --color-brand-200: #bcdcff;
+  --color-brand-300: #8ec6ff;
+  --color-brand-400: #59a6ff;
+  --color-brand-500: #3385fc;
+  --color-brand-600: #1d66f1;
+  --color-brand-700: #1751de;
+  --color-brand-800: #1944b4;
+  --color-brand-900: #1a3c8e;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* Hide the number-input spinners; bandwidth fields are typed, not stepped. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}

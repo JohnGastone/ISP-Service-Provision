@@ -1,10 +1,8 @@
-import "server-only";
 import { cookies } from "next/headers";
 import type { AuthUser } from "@/lib/types";
+import { TOKEN_COOKIE, USER_COOKIE, parseUserCookie } from "@/lib/session-shared";
 
-export const TOKEN_COOKIE = process.env.AUTH_COOKIE_NAME || "isp_token";
-/** Readable by middleware and the browser; holds no secret, only display/role data. */
-export const USER_COOKIE = "isp_user";
+export { TOKEN_COOKIE, USER_COOKIE, parseUserCookie };
 
 const SECURE = process.env.COOKIE_SECURE === "true";
 const MAX_AGE = 60 * 60 * 8; // 8 hours
@@ -45,11 +43,9 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   return parseUserCookie(raw);
 }
 
-export function parseUserCookie(raw: string): AuthUser | null {
-  try {
-    const parsed = JSON.parse(decodeURIComponent(raw)) as AuthUser;
-    return parsed && typeof parsed.role === "string" ? parsed : null;
-  } catch {
-    return null;
-  }
+/** Use in server components that must have a user; middleware normally guarantees it. */
+export async function requireUser(): Promise<AuthUser> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("No authenticated user in session");
+  return user;
 }
