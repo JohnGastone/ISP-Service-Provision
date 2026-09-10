@@ -100,11 +100,6 @@ export default async function CustomerOverview() {
           <EmptyState
             title="No requests yet"
             description="Submit a request and the administrator will review it against available capacity."
-            action={
-              <Link href="/customer/requests" className={primaryLinkClass}>
-                Request bandwidth
-              </Link>
-            }
           />
         ) : (
           <div className="overflow-x-auto">

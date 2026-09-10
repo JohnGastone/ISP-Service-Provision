@@ -14,3 +14,4 @@ yarn-error.log*
 .env*.local
 next-env.d.ts
 *.tsbuildinfo
+coverage

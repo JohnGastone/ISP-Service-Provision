@@ -71,14 +71,7 @@ export default async function CustomersPage({
             description={
               query
                 ? "Try a different name, email, phone number or district."
-                : "Register your first customer to start provisioning bandwidth."
-            }
-            action={
-              query ? null : (
-                <Link href="/admin/customers/new" className={primaryLinkClass}>
-                  Register customer
-                </Link>
-              )
+                : "Use “Register customer” above to add your first customer."
             }
           />
         ) : (

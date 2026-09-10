@@ -13,7 +13,7 @@ import {
   StatusBadge,
   Td,
   Th,
-  UsageBar,
+  CapacityMeter,
 } from "@/components/ui";
 import type { BandwidthPool, BandwidthRequest, Customer } from "@/lib/types";
 
@@ -133,31 +133,40 @@ export default async function AdminDashboard() {
               }
             />
           ) : (
-            <div className="space-y-6 px-6 py-5">
-              {pools.data.map((pool) => {
-                const a = availability(pool);
-                return (
-                  <div key={pool.id}>
-                    <p className="mb-3 text-sm font-semibold text-slate-900">Pool #{pool.id}</p>
-                    <div className="space-y-4">
-                      <UsageBar
-                        label="Download"
-                        usedPct={a.downloadUsedPct}
-                        caption={`${formatMbps(a.downloadRemaining)} remaining of ${formatMbps(
-                          pool.totalDownloadMbps,
-                        )}`}
-                      />
-                      <UsageBar
-                        label="Upload"
-                        usedPct={a.uploadUsedPct}
-                        caption={`${formatMbps(a.uploadRemaining)} remaining of ${formatMbps(
-                          pool.totalUploadMbps,
-                        )}`}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50/80">
+                  <tr>
+                    <Th>Pool</Th>
+                    <Th>Download</Th>
+                    <Th>Upload</Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pools.data.map((pool) => {
+                    const a = availability(pool);
+                    return (
+                      <tr key={pool.id}>
+                        <Td className="font-semibold text-slate-900">#{pool.id}</Td>
+                        <Td>
+                          <CapacityMeter
+                            usedPct={a.downloadUsedPct}
+                            remaining={a.downloadRemaining}
+                            total={pool.totalDownloadMbps}
+                          />
+                        </Td>
+                        <Td>
+                          <CapacityMeter
+                            usedPct={a.uploadUsedPct}
+                            remaining={a.uploadRemaining}
+                            total={pool.totalUploadMbps}
+                          />
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </Card>

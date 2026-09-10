@@ -20,12 +20,23 @@ export const metadata = { title: "My requests" };
 export default async function CustomerRequestsPage() {
   const [requests, pools] = await Promise.all([
     safeLoad<BandwidthRequest[]>(listMyRequests, []),
-    // Customers may list pools (only create-pool is admin-only), so the form
-    // can offer them by name with their free capacity.
+    // Whether customers may list pools depends on the backend's authorisation
+    // rules; if it refuses, the reason is shown rather than an empty dropdown.
     safeLoad<BandwidthPool[]>(listPools, []),
   ]);
 
   const hasPending = requests.data.some((r) => r.status === "PENDING");
+
+  // The API restricts the pool list to admins, so customers get a configured
+  // set of selectable pool ids instead. No capacity figures are shown for
+  // these — inventing them would mislead.
+  const fallbackPoolIds =
+    pools.data.length === 0
+      ? (process.env.CUSTOMER_POOL_IDS ?? "1")
+          .split(",")
+          .map((id) => Number(id.trim()))
+          .filter((id) => Number.isInteger(id) && id > 0)
+      : [];
 
   return (
     <>
@@ -87,7 +98,11 @@ export default async function CustomerRequestsPage() {
         </div>
 
         <div className="lg:col-span-1">
-          <MyRequestForm pools={pools.data} hasPending={hasPending} />
+          <MyRequestForm
+            pools={pools.data}
+            fallbackPoolIds={fallbackPoolIds}
+            hasPending={hasPending}
+          />
         </div>
       </div>
     </>

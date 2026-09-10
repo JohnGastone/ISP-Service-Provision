@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { formatMbps } from "@/lib/bandwidth";
 import type { RequestStatus } from "@/lib/types";
 
 export function cn(...parts: (string | false | null | undefined)[]) {
@@ -238,4 +239,43 @@ export function Th({ children, className }: { children: ReactNode; className?: s
 
 export function Td({ children, className }: { children: ReactNode; className?: string }) {
   return <td className={cn("px-6 py-4 text-sm text-slate-700", className)}>{children}</td>;
+}
+
+/** One direction's utilisation, sized to sit inside a table cell. */
+export function CapacityMeter({
+  usedPct,
+  remaining,
+  total,
+}: {
+  usedPct: number;
+  remaining: number;
+  total: number;
+}) {
+  const pct = Math.min(100, Math.max(0, usedPct));
+  const tone =
+    pct >= 90
+      ? "bg-red-500"
+      : pct >= 75
+        ? "bg-amber-500"
+        : "bg-gradient-to-r from-brand-500 to-accent-500";
+
+  return (
+    <div className="min-w-[9rem]">
+      <div className="flex items-baseline justify-between gap-3 text-xs tabular-nums">
+        <span className="font-semibold text-slate-700">
+          {formatMbps(remaining)} <span className="font-normal text-slate-400">free</span>
+        </span>
+        <span className="text-slate-400">of {formatMbps(total)}</span>
+      </div>
+      <div
+        className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200"
+        role="progressbar"
+        aria-valuenow={Math.round(pct)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div className={cn("h-full rounded-full", tone)} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
 }

@@ -97,10 +97,17 @@ export function CreatePool() {
 /**
  * Adjusts a pool's totals. The API rejects (422) any total below what approved
  * requests already hold, so the allocated figure is shown as the floor.
+ * Rendering and dismissal are owned by the caller, so this can sit inside an
+ * expanded table row.
  */
-export function EditPoolTotals({ pool }: { pool: BandwidthPool }) {
+export function PoolTotalsForm({
+  pool,
+  onCancel,
+}: {
+  pool: BandwidthPool;
+  onCancel: () => void;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [download, setDownload] = useState(String(pool.totalDownloadMbps));
   const [upload, setUpload] = useState(String(pool.totalUploadMbps));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -143,7 +150,7 @@ export function EditPoolTotals({ pool }: { pool: BandwidthPool }) {
     setSubmitting(true);
     try {
       await api(`/api/bandwidth/pools/${pool.id}`, { method: "PUT", body: parsed.data });
-      setOpen(false);
+      onCancel();
       router.refresh();
     } catch (error) {
       setFormError(error instanceof ClientApiError ? error.message : "Could not update the pool.");
@@ -152,18 +159,8 @@ export function EditPoolTotals({ pool }: { pool: BandwidthPool }) {
     }
   }
 
-  if (!open) {
-    return (
-      <div className="border-t border-slate-100 pt-4">
-        <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
-          Adjust capacity
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-4 border-t border-slate-100 pt-4">
+    <form onSubmit={onSubmit} noValidate className="space-y-4">
       {formError ? <ErrorNotice message={formError} /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -216,11 +213,11 @@ export function EditPoolTotals({ pool }: { pool: BandwidthPool }) {
           type="button"
           variant="secondary"
           onClick={() => {
-            setOpen(false);
             setErrors({});
             setFormError(null);
             setDownload(String(pool.totalDownloadMbps));
             setUpload(String(pool.totalUploadMbps));
+            onCancel();
           }}
         >
           Cancel

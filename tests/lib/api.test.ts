@@ -112,7 +112,7 @@ describe("apiFetch", () => {
   it("throws ApiUnreachableError when the host cannot be contacted", async () => {
     fetchMock.mockRejectedValue(new TypeError("fetch failed"));
 
-    const error = await apiFetch("/api/auth/login").catch((e) => e);
+    const error = (await apiFetch("/api/auth/login").catch((e) => e)) as ApiUnreachableError;
     expect(error).toBeInstanceOf(ApiUnreachableError);
     expect(error.message).toMatch(/Could not connect to/);
     expect(error.target).toContain("/api/auth/login");
@@ -123,7 +123,7 @@ describe("apiFetch", () => {
     timeout.name = "TimeoutError";
     fetchMock.mockRejectedValue(timeout);
 
-    const error = await apiFetch("/api/auth/login").catch((e) => e);
+    const error = (await apiFetch("/api/auth/login").catch((e) => e)) as ApiUnreachableError;
     expect(error).toBeInstanceOf(ApiUnreachableError);
     expect(error.message).toMatch(/No response from .*within \d+ms/);
   });

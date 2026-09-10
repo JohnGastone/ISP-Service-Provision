@@ -1,8 +1,9 @@
 import { listPools, listRequests } from "@/lib/api";
 import { safeLoad } from "@/lib/safe";
 import { availability, formatMbps } from "@/lib/bandwidth";
-import { Card, CardHeader, ErrorNotice, PageHeading, StatCard, UsageBar } from "@/components/ui";
-import { CreatePool, EditPoolTotals } from "./PoolManager";
+import { ErrorNotice, PageHeading, StatCard } from "@/components/ui";
+import { CreatePool } from "./PoolManager";
+import PoolTable from "./PoolTable";
 import type { BandwidthPool, BandwidthRequest } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -27,11 +28,11 @@ export default async function BandwidthPage() {
     { upload: 0, download: 0, uploadFree: 0, downloadFree: 0 },
   );
 
-  // How many approved allocations each pool is currently carrying.
-  const approvedByPool = new Map<number, number>();
+  // How many approved allocations each pool currently carries.
+  const allocationsByPool: Record<number, number> = {};
   for (const r of requests.data) {
     if (r.status === "APPROVED") {
-      approvedByPool.set(r.poolId, (approvedByPool.get(r.poolId) ?? 0) + 1);
+      allocationsByPool[r.poolId] = (allocationsByPool[r.poolId] ?? 0) + 1;
     }
   }
 
@@ -66,47 +67,8 @@ export default async function BandwidthPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          {pools.data.length === 0 ? (
-            <Card>
-              <CardHeader title="Pools" subtitle="No pools created yet" />
-              <p className="px-6 py-12 text-center text-sm text-slate-500">
-                Create a pool using the form to start allocating bandwidth.
-              </p>
-            </Card>
-          ) : (
-            pools.data.map((pool) => {
-              const a = availability(pool);
-              const approved = approvedByPool.get(pool.id) ?? 0;
-              return (
-                <Card key={pool.id}>
-                  <CardHeader
-                    title={`Pool #${pool.id}`}
-                    subtitle={`${approved} approved ${
-                      approved === 1 ? "allocation" : "allocations"
-                    }`}
-                  />
-                  <div className="space-y-5 px-6 py-5">
-                    <UsageBar
-                      label="Download"
-                      usedPct={a.downloadUsedPct}
-                      caption={`${formatMbps(pool.downloadAllocatedMbps)} allocated · ${formatMbps(
-                        a.downloadRemaining,
-                      )} remaining of ${formatMbps(pool.totalDownloadMbps)}`}
-                    />
-                    <UsageBar
-                      label="Upload"
-                      usedPct={a.uploadUsedPct}
-                      caption={`${formatMbps(pool.uploadAllocatedMbps)} allocated · ${formatMbps(
-                        a.uploadRemaining,
-                      )} remaining of ${formatMbps(pool.totalUploadMbps)}`}
-                    />
-                    <EditPoolTotals pool={pool} />
-                  </div>
-                </Card>
-              );
-            })
-          )}
+        <div className="lg:col-span-2">
+          <PoolTable pools={pools.data} allocationsByPool={allocationsByPool} />
         </div>
 
         <div className="lg:col-span-1">

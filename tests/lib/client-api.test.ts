@@ -53,7 +53,7 @@ describe("error handling", () => {
       jsonResponse({ detail: "Pool 1 cannot cover request 11", status: 422 }, 422),
     );
 
-    const error = await api("/x").catch((e) => e);
+    const error = (await api("/x").catch((e) => e)) as ClientApiError;
     expect(error).toBeInstanceOf(ClientApiError);
     expect(error.status).toBe(422);
     expect(error.message).toBe("Pool 1 cannot cover request 11");
@@ -61,13 +61,13 @@ describe("error handling", () => {
 
   it("falls back to a status-specific message when no detail is given", async () => {
     fetchMock.mockResolvedValue(jsonResponse({}, 409));
-    const error = await api("/x").catch((e) => e);
+    const error = (await api("/x").catch((e) => e)) as ClientApiError;
     expect(error.message).toMatch(/already been decided/i);
   });
 
   it("reports a network failure with status 0", async () => {
     fetchMock.mockRejectedValue(new TypeError("failed to fetch"));
-    const error = await api("/x").catch((e) => e);
+    const error = (await api("/x").catch((e) => e)) as ClientApiError;
     expect(error.status).toBe(0);
     expect(error.message).toMatch(/network error/i);
   });
@@ -89,7 +89,7 @@ describe("error handling", () => {
 
   it("handles a non-JSON error body", async () => {
     fetchMock.mockResolvedValue(new Response("upstream exploded", { status: 500 }));
-    const error = await api("/x").catch((e) => e);
+    const error = (await api("/x").catch((e) => e)) as ClientApiError;
     expect(error.message).toBe("upstream exploded");
   });
 });

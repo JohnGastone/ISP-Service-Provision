@@ -37,7 +37,11 @@ export const customerSchema = z
   });
 
 const mbps = (label: string, { allowZero = false } = {}) => {
-  const base = z.number({ invalid_type_error: `${label} must be a number` });
+  const base = z.number({
+    // Without required_error an empty field reports a bare "Required".
+    required_error: `${label} is required`,
+    invalid_type_error: `${label} must be a number`,
+  });
   return (allowZero
     ? base.min(0, `${label} cannot be negative`)
     : base.positive(`${label} must be greater than zero`)
@@ -52,8 +56,14 @@ export const bandwidthPoolSchema = z.object({
 
 /** POST /api/bandwidth/requests — both Mbps values must be > 0. */
 export const bandwidthRequestSchema = z.object({
-  customerId: z.number({ invalid_type_error: "Select a customer" }).int().positive("Select a customer"),
-  poolId: z.number({ invalid_type_error: "Select a pool" }).int().positive("Select a bandwidth pool"),
+  customerId: z
+    .number({ required_error: "Select a customer", invalid_type_error: "Select a customer" })
+    .int()
+    .positive("Select a customer"),
+  poolId: z
+    .number({ required_error: "Select a bandwidth pool", invalid_type_error: "Select a bandwidth pool" })
+    .int()
+    .positive("Select a bandwidth pool"),
   requestedUploadMbps: mbps("Requested upload"),
   requestedDownloadMbps: mbps("Requested download"),
 });
@@ -63,7 +73,10 @@ export const bandwidthRequestSchema = z.object({
  * the authenticated principal and ignores any sent in the body.
  */
 export const myRequestSchema = z.object({
-  poolId: z.number({ invalid_type_error: "Select a pool" }).int().positive("Select a bandwidth pool"),
+  poolId: z
+    .number({ required_error: "Select a bandwidth pool", invalid_type_error: "Select a bandwidth pool" })
+    .int()
+    .positive("Select a bandwidth pool"),
   requestedUploadMbps: mbps("Requested upload"),
   requestedDownloadMbps: mbps("Requested download"),
 });

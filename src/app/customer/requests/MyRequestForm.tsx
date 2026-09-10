@@ -11,14 +11,24 @@ import type { BandwidthPool } from "@/lib/types";
 
 export default function MyRequestForm({
   pools,
+  fallbackPoolIds = [],
   hasPending,
 }: {
   pools: BandwidthPool[];
+  /** Selectable pool ids used when the API withholds the pool list. */
+  fallbackPoolIds?: number[];
   hasPending: boolean;
 }) {
   const router = useRouter();
+
+  // Prefer real pools (with capacity); otherwise offer ids alone.
+  const options: { id: number; pool: BandwidthPool | null }[] =
+    pools.length > 0
+      ? pools.map((p) => ({ id: p.id, pool: p }))
+      : fallbackPoolIds.map((id) => ({ id, pool: null }));
+
   const [values, setValues] = useState({
-    poolId: pools.length === 1 ? String(pools[0].id) : "",
+    poolId: options.length === 1 ? String(options[0].id) : "",
     requestedDownloadMbps: "",
     requestedUploadMbps: "",
   });
@@ -106,34 +116,38 @@ export default function MyRequestForm({
           hint={
             pools.length > 0
               ? "Free capacity shown per pool — pick one that can cover your request."
-              : undefined
+              : "Ask the administrator which pool your service uses."
           }
         >
           <Select
             id="poolId"
             value={values.poolId}
             invalid={Boolean(errors.poolId)}
-            disabled={pools.length === 0}
+            disabled={options.length === 0}
             onChange={(e) => update("poolId", e.target.value)}
           >
             <option value="">
-              {pools.length === 0 ? "No pools available" : "Select a pool…"}
+              {options.length === 0 ? "No pools available" : "Select a pool…"}
             </option>
-            {pools.map((p) => {
-              const a = availability(p);
+            {options.map(({ id, pool }) => {
+              const a = pool ? availability(pool) : null;
               return (
-                <option key={p.id} value={p.id}>
-                  Pool #{p.id} — {formatMbps(a.downloadRemaining)} ↓ /{" "}
-                  {formatMbps(a.uploadRemaining)} ↑ free
+                <option key={id} value={id}>
+                  {a
+                    ? `Pool #${id} — ${formatMbps(a.downloadRemaining)} ↓ / ${formatMbps(
+                        a.uploadRemaining,
+                      )} ↑ free`
+                    : `Pool #${id}`}
                 </option>
               );
             })}
           </Select>
         </Field>
 
-        {pools.length === 0 ? (
-          <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-slate-600">
-            No bandwidth pools could be loaded. Please contact the ISP administrator.
+        {options.length === 0 ? (
+          <p className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900">
+            There are no bandwidth pools to request from yet. Please contact the ISP
+            administrator.
           </p>
         ) : null}
 
@@ -190,7 +204,7 @@ export default function MyRequestForm({
         <Button
           type="submit"
           loading={submitting}
-          disabled={pools.length === 0}
+          disabled={options.length === 0}
           className="w-full"
         >
           Submit request
